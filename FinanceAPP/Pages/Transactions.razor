@@ -1,0 +1,60 @@
+﻿@page "/transactions"
+@using FinanceAPP.Models
+
+<h3>Add Transaction</h3>
+
+<div>
+    <label>Category:</label>
+    <input @bind="newTransaction.Category" />
+</div>
+
+<div>
+    <label>Description:</label>
+    <input @bind="newTransaction.Description" />
+</div>
+
+<div>
+    <label>Amount:</label>
+    <input type="number" @bind="newTransaction.Amount" />
+</div>
+
+<div>
+    <label>Date (dd/MM/yyyy):</label>
+    <input type="date" @bind="operationDateInput" />
+</div>
+
+<button @onclick="AddTransaction">Add Transaction</button>
+
+<hr />
+
+<h3>All Transactions</h3>
+
+@if (transactions.Count == 0)
+{
+    <p>No transactions yet.</p>
+}
+else
+{
+    <ul>
+        @foreach (var t in transactions)
+        {
+            <li>@t.OperationDate - @t.Category - @t.Description - R$ @t.Amount</li>
+        }
+    </ul>
+}
+
+@code {
+    private Transaction newTransaction = new();
+    private DateOnly operationDateInput = DateOnly.FromDateTime(DateTime.Now);
+    private List<Transaction> transactions = new();
+
+    private void AddTransaction()
+    {
+        newTransaction.OperationDate = operationDateInput;
+        transactions.Add(newTransaction);
+
+        // Reset form
+        newTransaction = new();
+        operationDateInput = DateOnly.FromDateTime(DateTime.Now);
+    }
+}
