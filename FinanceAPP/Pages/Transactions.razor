@@ -1,26 +1,27 @@
 ﻿@page "/transactions"
 @using FinanceAPP.Models
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
 
 <h3>Add Transaction</h3>
 
 <div>
-    <label>Category:</label>
-    <input @bind="newTransaction.Category" />
+	<label>Category:</label>
+	<input @bind="newTransaction.Category" />
 </div>
 
 <div>
-    <label>Description:</label>
-    <input @bind="newTransaction.Description" />
+	<label>Description:</label>
+	<input @bind="newTransaction.Description" />
 </div>
 
 <div>
-    <label>Amount:</label>
-    <input type="number" @bind="newTransaction.Amount" />
+	<label>Amount:</label>
+	<input type="number" @bind="newTransaction.Amount" />
 </div>
 
 <div>
-    <label>Date (dd/MM/yyyy):</label>
-    <input type="date" @bind="operationDateInput" />
+	<label>Date (dd/MM/yyyy):</label>
+	<input type="date" @bind="operationDateInput" />
 </div>
 
 <button @onclick="AddTransaction">Add Transaction</button>
@@ -31,30 +32,49 @@
 
 @if (transactions.Count == 0)
 {
-    <p>No transactions yet.</p>
+	<p>No transactions yet.</p>
 }
 else
 {
-    <ul>
-        @foreach (var t in transactions)
-        {
-            <li>@t.OperationDate - @t.Category - @t.Description - R$ @t.Amount</li>
-        }
-    </ul>
+	<ul>
+		@foreach (var t in transactions)
+		{
+			<li>@t.OperationDate - @t.Category - @t.Description - R$ @t.Amount</li>
+			<button @onclick="(() => RemoveTransaction(t))">Remove</button>
+		}
+	</ul>
 }
 
 @code {
-    private Transaction newTransaction = new();
-    private DateOnly operationDateInput = DateOnly.FromDateTime(DateTime.Now);
-    private List<Transaction> transactions = new();
+	private Transaction newTransaction = new();
+	private DateOnly operationDateInput = DateOnly.FromDateTime(DateTime.Now);
+	private List<Transaction> transactions = new();
 
-    private void AddTransaction()
-    {
-        newTransaction.OperationDate = operationDateInput;
-        transactions.Add(newTransaction);
+	protected override async Task OnInitializedAsync()
+	{
+		var saved = await localStorage.GetItemAsync<List<Transaction>>("transactions");
+		if (saved != null)
+		{
+			transactions = saved;
+		}
+	}
 
-        // Reset form
-        newTransaction = new();
-        operationDateInput = DateOnly.FromDateTime(DateTime.Now);
-    }
+	private async Task AddTransaction()
+	{
+		newTransaction.OperationDate = operationDateInput;
+		transactions.Add(newTransaction);
+
+		await localStorage.SetItemAsync("transactions", transactions);
+
+		newTransaction = new();
+		operationDateInput = DateOnly.FromDateTime(DateTime.Now);
+	}
+
+	private async Task RemoveTransaction(Transaction t)
+	{
+		transactions.Remove(t);
+		await localStorage.SetItemAsync("transactions", transactions);
+
+	}
+
 }
