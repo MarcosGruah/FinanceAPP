@@ -24,7 +24,9 @@
 	<input type="date" @bind="operationDateInput" />
 </div>
 
-<button @onclick="AddTransaction">Add Transaction</button>
+<button @onclick="AddTransaction">
+	@(editingTransaction == null ? "Add Transaction" : "Save Changes")
+</button>
 
 <hr />
 
@@ -41,11 +43,13 @@ else
 		{
 			<li>@t.OperationDate - @t.Category - @t.Description - R$ @t.Amount</li>
 			<button @onclick="(() => RemoveTransaction(t))">Remove</button>
+			<button @onclick="(() => StartEdit(t))">Edit</button>
 		}
 	</ul>
 }
 
 @code {
+	private Transaction? editingTransaction = null;
 	private Transaction newTransaction = new();
 	private DateOnly operationDateInput = DateOnly.FromDateTime(DateTime.Now);
 	private List<Transaction> transactions = new();
@@ -61,11 +65,27 @@ else
 
 	private async Task AddTransaction()
 	{
-		newTransaction.OperationDate = operationDateInput;
-		transactions.Add(newTransaction);
+		if (editingTransaction == null)
+		{
+			// Adding new transaction
+			newTransaction.OperationDate = operationDateInput;
+			transactions.Add(newTransaction);
+		}
+		else
+		{
+			// Editing existing transaction
+			editingTransaction.Category = newTransaction.Category;
+			editingTransaction.Description = newTransaction.Description;
+			editingTransaction.Amount = newTransaction.Amount;
+			editingTransaction.OperationDate = operationDateInput;
 
+			editingTransaction = null;  // Done editing
+		}
+
+		// Save to LocalStorage
 		await localStorage.SetItemAsync("transactions", transactions);
 
+		// Reset form
 		newTransaction = new();
 		operationDateInput = DateOnly.FromDateTime(DateTime.Now);
 	}
@@ -75,6 +95,17 @@ else
 		transactions.Remove(t);
 		await localStorage.SetItemAsync("transactions", transactions);
 
+	}
+
+	private void StartEdit(Transaction t)
+	{
+		editingTransaction = t;  // Mark this transaction as being edited
+
+		// Populate the form with this transaction's data
+		newTransaction.Category = t.Category;
+		newTransaction.Description = t.Description;
+		newTransaction.Amount = t.Amount;
+		operationDateInput = t.OperationDate;
 	}
 
 }
