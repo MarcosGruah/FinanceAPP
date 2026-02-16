@@ -7,7 +7,13 @@
 
 <div>
 	<label>Category:</label>
-	<input @bind="newTransaction.Category" />
+	<InputSelect @bind-Value="newTransaction.Category">
+		<option value="">-- Select Category --</option>
+		@foreach (var c in categories)
+		{
+			<option value="@c.Name">@c.Name</option>
+		}
+	</InputSelect>
 </div>
 
 <div>
@@ -23,11 +29,11 @@
 <div>
 	<label>Transaction Type:</label>
 	<InputSelect @bind-Value="newTransaction.Type">
-		@foreach (var type in Enum.GetValues<TransactionType>())
+		@foreach (var type in Enum.GetValues<Transaction.TransactionType>())
 		{
-			<option value="@type">@type</option>
+			<option value="@type.ToString()">@type</option>
 		}
-		</InputSelect>
+	</InputSelect>
 </div>
 
 <div>
@@ -64,13 +70,19 @@ else
 	private Transaction newTransaction = new();
 	private DateOnly operationDateInput = DateOnly.FromDateTime(DateTime.Now);
 	private List<Transaction> transactions = new();
+	private List<Category> categories = new();
 
 	protected override async Task OnInitializedAsync()
 	{
-		var saved = await localStorage.GetItemAsync<List<Transaction>>("transactions");
-		if (saved != null)
+		var savedT = await localStorage.GetItemAsync<List<Transaction>>("transactions");
+		if (savedT != null)
 		{
-			transactions = saved;
+			transactions = savedT;
+		}
+		var savedC = await localStorage.GetItemAsync<List<Category>>("categories");
+		if (savedC != null)
+		{
+			categories = savedC;
 		}
 	}
 

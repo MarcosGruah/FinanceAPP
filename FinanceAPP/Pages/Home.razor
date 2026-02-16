@@ -41,17 +41,38 @@ else
 	</ul>
 }
 
+<h3>All Categories</h3>
+
+@if (categories.Count == 0)
+{
+	<p>No categories yet.</p>
+}
+else
+{
+	<ul>
+		@foreach (var c in categories)
+		{
+			<li>  @c.Name - @c.Description</li>
+		}
+	</ul>
+}
 
 @code{
 	Dictionary<(int year, int month), (decimal income, decimal expenses)> monthlySummary = new();
 	private List<Transaction> transactions = new();
+	private List<Category> categories = new();
 
 	protected override async Task OnInitializedAsync()
 	{
-		var saved = await localStorage.GetItemAsync<List<Transaction>>("transactions");
-		if (saved != null)
+		var savedT = await localStorage.GetItemAsync<List<Transaction>>("transactions");
+		if (savedT != null)
 		{
-			transactions = saved;
+			transactions = savedT;
+		}
+		var savedC = await localStorage.GetItemAsync<List<Category>>("categories");
+		if (savedC != null)
+		{
+			categories = savedC;
 		}
 		BuildDictionary();
 	}
@@ -69,11 +90,11 @@ else
 
 			(decimal currentIncome, decimal currentExpense) = monthlySummary[key];
 
-			if(transaction.Type == TransactionType.Income)
+			if(transaction.Type == Transaction.TransactionType.Income)
 			{
 				currentIncome += transaction.Amount;
 			}
-			else if (transaction.Type == TransactionType.Expense)
+			else if (transaction.Type == Transaction.TransactionType.Expense)
 			{
 				currentExpense += transaction.Amount;
 			}

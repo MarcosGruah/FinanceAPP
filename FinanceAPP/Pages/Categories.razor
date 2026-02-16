@@ -1,0 +1,92 @@
+﻿@page "/categories"
+@using FinanceAPP.Models
+@using System.Globalization
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+
+
+<h3>Transaction Category</h3>
+
+<div>
+	<label>Category:</label>
+	<input @bind="newCategory.Name" />
+</div>
+<div>
+	<label>Description:</label>
+	<input @bind="newCategory.Description" />
+</div>
+<button @onclick="AddCategory">
+	@(editingCategory == null ? "Add Category" : "Save Changes")
+</button>
+
+<h3>All Transactions</h3>
+
+@if (categories.Count == 0)
+{
+	<p>No categories yet.</p>
+}
+else
+{
+	<ul>
+		@foreach (var c in categories)
+		{
+			<li>@c.Name - @c.Description</li>
+			<button @onclick="(() => RemoveCategory(c))">Remove</button>
+			<button @onclick="(() => StartEdit(c))">Edit</button>
+		}
+	</ul>
+}
+
+@code {
+	private Category? editingCategory = null;
+
+	private Category newCategory = new();
+	private List<Category> categories = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		var saved = await localStorage.GetItemAsync<List<Category>>("categories");
+		if (saved != null)
+		{
+			categories = saved;
+		}
+	}
+	private async Task AddCategory()
+	{
+		if (editingCategory == null)
+		{
+			// Adding new transaction
+			categories.Add(newCategory);
+		}
+		else
+		{
+			// Editing existing transaction
+			editingCategory.Name = newCategory.Name;
+			editingCategory.Description = newCategory.Description;
+			editingCategory = null;  // Done editing
+		}
+
+		// Save to LocalStorage
+		await localStorage.SetItemAsync("categories", categories);
+
+		// Reset form
+		newCategory = new();
+	}
+
+	private async Task RemoveCategory(Category c)
+	{
+		categories.Remove(c);
+		await localStorage.SetItemAsync("categories", categories);
+
+	}
+
+	private void StartEdit(Category c)
+	{
+		editingCategory = c;  // Mark this transaction as being edited
+
+		// Populate the form with this transaction's data
+		newCategory.Name = c.Name;
+		newCategory.Description = c.Description;
+
+	}
+}

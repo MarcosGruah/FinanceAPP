@@ -42,5 +42,12 @@
             Type = type;
             OperationDate = operationDate;
         }
+
+        public enum TransactionType
+        {
+            Expense,
+            Income,
+            Saving
+        }
     }
 }
