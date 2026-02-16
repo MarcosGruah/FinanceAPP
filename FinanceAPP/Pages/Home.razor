@@ -1,7 +1,83 @@
 ﻿@page "/"
+@using FinanceAPP.Models
+@using System.Globalization
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<h2>Summary</h2>
 
-Welcome to your new app.
+
+@if (monthlySummary.Count == 0)
+{
+	<p>No data to summarize yet.</p>
+}
+else
+{
+	<ul>
+		@foreach (var month in monthlySummary)
+		{
+			var (year, monthNum) = month.Key;
+			var (income, expenses) = month.Value;
+			var balance = income - expenses;
+			<li>@year / @monthNum: Income = R$ @income, Expenses = R$ @expenses, Balance = R$ @balance</li>
+		}
+	</ul>
+}
+
+<h3>All Transactions</h3>
+
+@if (transactions.Count == 0)
+{
+	<p>No transactions yet.</p>
+}
+else
+{
+	<ul>
+		@foreach (var t in transactions)
+		{
+			<li>  @t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @t.Category - @t.Description - R$ @t.Amount</li>
+		}
+	</ul>
+}
+
+
+@code{
+	Dictionary<(int year, int month), (decimal income, decimal expenses)> monthlySummary = new();
+	private List<Transaction> transactions = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		var saved = await localStorage.GetItemAsync<List<Transaction>>("transactions");
+		if (saved != null)
+		{
+			transactions = saved;
+		}
+		BuildDictionary();
+	}
+
+	private void BuildDictionary()
+	{
+		foreach (Transaction transaction in transactions)
+		{
+			(int year, int month) key = (transaction.OperationDate.Year, transaction.OperationDate.Month);
+
+			if (!monthlySummary.ContainsKey(key))
+			{
+				monthlySummary[key] = (0m, 0m);
+			}
+
+			(decimal currentIncome, decimal currentExpense) = monthlySummary[key];
+
+			if(transaction.Type == TransactionType.Income)
+			{
+				currentIncome += transaction.Amount;
+			}
+			else if (transaction.Type == TransactionType.Expense)
+			{
+				currentExpense += transaction.Amount;
+			}
+			monthlySummary[key] = (currentIncome, currentExpense);
+		}
+	}
+}

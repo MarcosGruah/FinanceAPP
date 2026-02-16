@@ -1,5 +1,6 @@
 ﻿@page "/transactions"
 @using FinanceAPP.Models
+@using System.Globalization
 @inject Blazored.LocalStorage.ILocalStorageService localStorage
 
 <h3>Add Transaction</h3>
@@ -17,6 +18,16 @@
 <div>
 	<label>Amount:</label>
 	<input type="number" @bind="newTransaction.Amount" />
+</div>
+
+<div>
+	<label>Transaction Type:</label>
+	<InputSelect @bind-Value="newTransaction.Type">
+		@foreach (var type in Enum.GetValues<TransactionType>())
+		{
+			<option value="@type">@type</option>
+		}
+		</InputSelect>
 </div>
 
 <div>
@@ -41,7 +52,7 @@ else
 	<ul>
 		@foreach (var t in transactions)
 		{
-			<li>@t.OperationDate - @t.Category - @t.Description - R$ @t.Amount</li>
+			<li>@t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @t.Category - @t.Description - R$ @t.Amount</li>
 			<button @onclick="(() => RemoveTransaction(t))">Remove</button>
 			<button @onclick="(() => StartEdit(t))">Edit</button>
 		}
@@ -76,6 +87,7 @@ else
 			// Editing existing transaction
 			editingTransaction.Category = newTransaction.Category;
 			editingTransaction.Description = newTransaction.Description;
+			editingTransaction.Type = newTransaction.Type;
 			editingTransaction.Amount = newTransaction.Amount;
 			editingTransaction.OperationDate = operationDateInput;
 
@@ -104,6 +116,7 @@ else
 		// Populate the form with this transaction's data
 		newTransaction.Category = t.Category;
 		newTransaction.Description = t.Description;
+		newTransaction.Type = t.Type;
 		newTransaction.Amount = t.Amount;
 		operationDateInput = t.OperationDate;
 	}

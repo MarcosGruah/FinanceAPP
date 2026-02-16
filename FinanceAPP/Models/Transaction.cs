@@ -11,6 +11,8 @@
         /// </summary>
         public decimal Amount { get; set; }
 
+        public TransactionType Type { get; set; }
+
         /// <summary>
         /// Tracks when the transaction was added to the system
         /// </summary>
@@ -31,12 +33,13 @@
         }
 
         // Constructor for manual creation
-        public Transaction(string category, string description, decimal amount, DateOnly operationDate)
+        public Transaction(string category, string description, decimal amount, TransactionType type, DateOnly operationDate)
             : this() // Call parameterless constructor first
         {
             Category = category;
             Description = description;
-            Amount = amount;
+            Amount = Math.Abs(amount);
+            Type = type;
             OperationDate = operationDate;
         }
     }
