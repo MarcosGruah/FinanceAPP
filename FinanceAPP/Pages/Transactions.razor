@@ -7,11 +7,11 @@
 
 <div>
 	<label>Category:</label>
-	<InputSelect @bind-Value="newTransaction.Category">
+	<InputSelect @bind-Value="newTransaction.CategoryId">
 		<option value="">-- Select Category --</option>
 		@foreach (var c in categories)
 		{
-			<option value="@c.Name">@c.Name</option>
+			<option value="@c.Id.ToString()">@c.Name</option>
 		}
 	</InputSelect>
 </div>
@@ -58,7 +58,7 @@ else
 	<ul>
 		@foreach (var t in transactions)
 		{
-			<li>@t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @t.Category - @t.Description - R$ @t.Amount</li>
+			<li>@t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount</li>
 			<button @onclick="(() => RemoveTransaction(t))">Remove</button>
 			<button @onclick="(() => StartEdit(t))">Edit</button>
 		}
@@ -97,7 +97,7 @@ else
 		else
 		{
 			// Editing existing transaction
-			editingTransaction.Category = newTransaction.Category;
+			editingTransaction.CategoryId = newTransaction.CategoryId;
 			editingTransaction.Description = newTransaction.Description;
 			editingTransaction.Type = newTransaction.Type;
 			editingTransaction.Amount = newTransaction.Amount;
@@ -126,11 +126,16 @@ else
 		editingTransaction = t;  // Mark this transaction as being edited
 
 		// Populate the form with this transaction's data
-		newTransaction.Category = t.Category;
+		newTransaction.CategoryId = t.CategoryId;
 		newTransaction.Description = t.Description;
 		newTransaction.Type = t.Type;
 		newTransaction.Amount = t.Amount;
 		operationDateInput = t.OperationDate;
+	}
+
+	private string GetCategoryName(Guid categoryId)
+	{
+		return categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "Unknown";
 	}
 
 }

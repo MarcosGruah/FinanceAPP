@@ -37,7 +37,7 @@ else
 	<ul>
 		@foreach (var item in incomeByCategory)
 		{
-			<li>@item.Key: R$ @item.Value</li>
+			<li>@GetCategoryName(item.Key): R$ @item.Value</li>
 		}
 	</ul>
 	<p><strong>Total Income: R$ @incomeByCategory.Values.Sum()</strong></p>
@@ -53,7 +53,7 @@ else
 	<ul>
 		@foreach (var item in expensesByCategory)
 		{
-			<li>@item.Key: R$ @item.Value</li>
+			<li>@GetCategoryName(item.Key): R$ @item.Value</li>
 		}
 	</ul>
 	<p><strong>Total Expenses: R$ @expensesByCategory.Values.Sum()</strong></p>
@@ -72,7 +72,7 @@ else
 	<ul>
 		@foreach (var t in transactions)
 		{
-			<li>  @t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @t.Category - @t.Description - R$ @t.Amount</li>
+			<li>  @t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount</li>
 		}
 	</ul>
 }
@@ -95,8 +95,8 @@ else
 
 @code{
 	Dictionary<(int year, int month), (decimal income, decimal expenses)> monthlySummary = new();
-	Dictionary<string, decimal> incomeByCategory = new();
-	Dictionary<string, decimal> expensesByCategory = new();
+	Dictionary<Guid, decimal> incomeByCategory = new();
+	Dictionary<Guid, decimal> expensesByCategory = new();
 	private List<Transaction> transactions = new();
 	private List<Category> categories = new();
 
@@ -145,34 +145,38 @@ else
 	{
 		foreach (Transaction transaction in transactions)
 		{
-			string categoryName = transaction.Category;  // This is the key
+			Guid categoryId = transaction.CategoryId;  // This is the key
 
 			if (transaction.Type == Transaction.TransactionType.Income)
 			{
 				// Check if "Income" (or whatever category) already exists in dictionary
-				if (!incomeByCategory.ContainsKey(categoryName))
+				if (!incomeByCategory.ContainsKey(categoryId))
 				{
 					// First time seeing this category, add it with this amount
-					incomeByCategory[categoryName] = transaction.Amount;
+					incomeByCategory[categoryId] = transaction.Amount;
 				}
 				else
 				{
 					// Category already exists, add to existing total
-					incomeByCategory[categoryName] += transaction.Amount;
+					incomeByCategory[categoryId] += transaction.Amount;
 				}
 			}
 			else if (transaction.Type == Transaction.TransactionType.Expense)
 			{
 				// Same thing for expenses
-				if (!expensesByCategory.ContainsKey(categoryName))
+				if (!expensesByCategory.ContainsKey(categoryId))
 				{
-					expensesByCategory[categoryName] = transaction.Amount;
+					expensesByCategory[categoryId] = transaction.Amount;
 				}
 				else
 				{
-					expensesByCategory[categoryName] += transaction.Amount;
+					expensesByCategory[categoryId] += transaction.Amount;
 				}
 			}
 		}
+	}
+	private string GetCategoryName(Guid categoryId)
+	{
+		return categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "Unknown";
 	}
 }

@@ -3,7 +3,7 @@
     public class Transaction
     {
         public Guid Id { get; set; }
-        public string Category { get; set; }
+        public Guid CategoryId { get; set; }
         public string Description { get; set; }
 
         /// <summary>
@@ -28,15 +28,15 @@
         {
             Id = Guid.NewGuid();
             Date = DateTime.UtcNow;
-            Category = string.Empty;
+            CategoryId = Guid.Empty;
             Description = string.Empty;
         }
 
         // Constructor for manual creation
-        public Transaction(string category, string description, decimal amount, TransactionType type, DateOnly operationDate)
+        public Transaction(Guid categoryId, string description, decimal amount, TransactionType type, DateOnly operationDate)
             : this() // Call parameterless constructor first
         {
-            Category = category;
+            CategoryId = categoryId;
             Description = description;
             Amount = Math.Abs(amount);
             Type = type;
@@ -46,8 +46,7 @@
         public enum TransactionType
         {
             Expense,
-            Income,
-            Saving
+            Income
         }
     }
 }
