@@ -1,9 +1,7 @@
 ﻿@page "/categories"
 @using FinanceAPP.Models
 @using System.Globalization
-@inject Blazored.LocalStorage.ILocalStorageService localStorage
-
-
+@inject FinanceAPP.Services.CategoryService categoryService
 
 <h3>Transaction Category</h3>
 
@@ -15,20 +13,20 @@
 	<label>Description:</label>
 	<input @bind="newCategory.Description" />
 </div>
+
 <button @onclick="AddCategory">
 	@(editingCategory == null ? "Add Category" : "Save Changes")
 </button>
 
-<h3>All Transactions</h3>
-
-@if (categories.Count == 0)
+<h3>All Categories</h3>
+@if (categoryService.Categories.Count == 0)
 {
 	<p>No categories yet.</p>
 }
 else
 {
 	<ul>
-		@foreach (var c in categories)
+		@foreach (var c in categoryService.Categories)
 		{
 			<li>@c.Name - @c.Description</li>
 			<button @onclick="(() => RemoveCategory(c))">Remove</button>
@@ -39,35 +37,28 @@ else
 
 @code {
 	private Category? editingCategory = null;
-
 	private Category newCategory = new();
-	private List<Category> categories = new();
 
 	protected override async Task OnInitializedAsync()
 	{
-		var saved = await localStorage.GetItemAsync<List<Category>>("categories");
-		if (saved != null)
-		{
-			categories = saved;
-		}
+		await categoryService.LoadAsync();
 	}
+
 	private async Task AddCategory()
 	{
 		if (editingCategory == null)
 		{
 			// Adding new transaction
-			categories.Add(newCategory);
+			await categoryService.AddAsync(newCategory);
 		}
 		else
 		{
 			// Editing existing transaction
 			editingCategory.Name = newCategory.Name;
 			editingCategory.Description = newCategory.Description;
+			await categoryService.UpdateAsync(editingCategory);
 			editingCategory = null;  // Done editing
 		}
-
-		// Save to LocalStorage
-		await localStorage.SetItemAsync("categories", categories);
 
 		// Reset form
 		newCategory = new();
@@ -75,9 +66,7 @@ else
 
 	private async Task RemoveCategory(Category c)
 	{
-		categories.Remove(c);
-		await localStorage.SetItemAsync("categories", categories);
-
+		await categoryService.DeleteAsync(c);
 	}
 
 	private void StartEdit(Category c)

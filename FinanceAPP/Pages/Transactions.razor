@@ -1,7 +1,8 @@
 ﻿@page "/transactions"
 @using FinanceAPP.Models
 @using System.Globalization
-@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject FinanceAPP.Services.CategoryService categoryService
+@inject FinanceAPP.Services.TransactionService transactionService
 
 <h3>Add Transaction</h3>
 
@@ -9,7 +10,7 @@
 	<label>Category:</label>
 	<InputSelect @bind-Value="newTransaction.CategoryId">
 		<option value="">-- Select Category --</option>
-		@foreach (var c in categories)
+		@foreach (var c in categoryService.Categories)
 		{
 			<option value="@c.Id.ToString()">@c.Name</option>
 		}
@@ -49,16 +50,16 @@
 
 <h3>All Transactions</h3>
 
-@if (transactions.Count == 0)
+@if (transactionService.Transactions.Count == 0)
 {
 	<p>No transactions yet.</p>
 }
 else
 {
 	<ul>
-		@foreach (var t in transactions)
+		@foreach (var t in transactionService.Transactions)
 		{
-			<li>@t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount</li>
+			<li>@t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @categoryService.GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount</li>
 			<button @onclick="(() => RemoveTransaction(t))">Remove</button>
 			<button @onclick="(() => StartEdit(t))">Edit</button>
 		}
@@ -69,21 +70,12 @@ else
 	private Transaction? editingTransaction = null;
 	private Transaction newTransaction = new();
 	private DateOnly operationDateInput = DateOnly.FromDateTime(DateTime.Now);
-	private List<Transaction> transactions = new();
-	private List<Category> categories = new();
+
 
 	protected override async Task OnInitializedAsync()
 	{
-		var savedT = await localStorage.GetItemAsync<List<Transaction>>("transactions");
-		if (savedT != null)
-		{
-			transactions = savedT;
-		}
-		var savedC = await localStorage.GetItemAsync<List<Category>>("categories");
-		if (savedC != null)
-		{
-			categories = savedC;
-		}
+		await categoryService.LoadAsync();
+		await transactionService.LoadAsync();
 	}
 
 	private async Task AddTransaction()
@@ -92,7 +84,7 @@ else
 		{
 			// Adding new transaction
 			newTransaction.OperationDate = operationDateInput;
-			transactions.Add(newTransaction);
+			await transactionService.AddAsync(newTransaction);
 		}
 		else
 		{
@@ -102,12 +94,9 @@ else
 			editingTransaction.Type = newTransaction.Type;
 			editingTransaction.Amount = newTransaction.Amount;
 			editingTransaction.OperationDate = operationDateInput;
-
+			await transactionService.UpdateAsync(editingTransaction);
 			editingTransaction = null;  // Done editing
 		}
-
-		// Save to LocalStorage
-		await localStorage.SetItemAsync("transactions", transactions);
 
 		// Reset form
 		newTransaction = new();
@@ -116,8 +105,7 @@ else
 
 	private async Task RemoveTransaction(Transaction t)
 	{
-		transactions.Remove(t);
-		await localStorage.SetItemAsync("transactions", transactions);
+		await transactionService.DeleteAsync(t);
 
 	}
 
@@ -132,10 +120,4 @@ else
 		newTransaction.Amount = t.Amount;
 		operationDateInput = t.OperationDate;
 	}
-
-	private string GetCategoryName(Guid categoryId)
-	{
-		return categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "Unknown";
-	}
-
 }

@@ -1,7 +1,8 @@
 ﻿@page "/"
 @using FinanceAPP.Models
 @using System.Globalization
-@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject FinanceAPP.Services.CategoryService categoryService
+@inject FinanceAPP.Services.TransactionService transactionService
 
 <PageTitle>Home</PageTitle>
 
@@ -37,7 +38,7 @@ else
 	<ul>
 		@foreach (var item in incomeByCategory)
 		{
-			<li>@GetCategoryName(item.Key): R$ @item.Value</li>
+			<li>@categoryService.GetCategoryName(item.Key): R$ @item.Value</li>
 		}
 	</ul>
 	<p><strong>Total Income: R$ @incomeByCategory.Values.Sum()</strong></p>
@@ -53,7 +54,7 @@ else
 	<ul>
 		@foreach (var item in expensesByCategory)
 		{
-			<li>@GetCategoryName(item.Key): R$ @item.Value</li>
+			<li>@categoryService.GetCategoryName(item.Key): R$ @item.Value</li>
 		}
 	</ul>
 	<p><strong>Total Expenses: R$ @expensesByCategory.Values.Sum()</strong></p>
@@ -63,30 +64,30 @@ else
 
 <h3>All Transactions</h3>
 
-@if (transactions.Count == 0)
+@if (transactionService.Transactions.Count == 0)
 {
 	<p>No transactions yet.</p>
 }
 else
 {
 	<ul>
-		@foreach (var t in transactions)
+		@foreach (var t in transactionService.Transactions)
 		{
-			<li>  @t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount</li>
+			<li>  @t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @categoryService.GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount</li>
 		}
 	</ul>
 }
 
 <h3>All Categories</h3>
 
-@if (categories.Count == 0)
+@if (categoryService.Categories.Count == 0)
 {
 	<p>No categories yet.</p>
 }
 else
 {
 	<ul>
-		@foreach (var c in categories)
+		@foreach (var c in categoryService.Categories)
 		{
 			<li>  @c.Name - @c.Description</li>
 		}
@@ -97,28 +98,21 @@ else
 	Dictionary<(int year, int month), (decimal income, decimal expenses)> monthlySummary = new();
 	Dictionary<Guid, decimal> incomeByCategory = new();
 	Dictionary<Guid, decimal> expensesByCategory = new();
-	private List<Transaction> transactions = new();
-	private List<Category> categories = new();
+
 
 	protected override async Task OnInitializedAsync()
 	{
-		var savedT = await localStorage.GetItemAsync<List<Transaction>>("transactions");
-		if (savedT != null)
-		{
-			transactions = savedT;
-		}
-		var savedC = await localStorage.GetItemAsync<List<Category>>("categories");
-		if (savedC != null)
-		{
-			categories = savedC;
-		}
+
+		await categoryService.LoadAsync();
+		await transactionService.LoadAsync();
+
 		BuildMonthSummary();
 		BuildCategorySummary();
 	}
 
 	private void BuildMonthSummary()
 	{
-		foreach (Transaction transaction in transactions)
+		foreach (Transaction transaction in transactionService.Transactions)
 		{
 			(int year, int month) key = (transaction.OperationDate.Year, transaction.OperationDate.Month);
 
@@ -143,7 +137,7 @@ else
 
 	private void BuildCategorySummary()
 	{
-		foreach (Transaction transaction in transactions)
+		foreach (Transaction transaction in transactionService.Transactions)
 		{
 			Guid categoryId = transaction.CategoryId;  // This is the key
 
@@ -174,9 +168,5 @@ else
 				}
 			}
 		}
-	}
-	private string GetCategoryName(Guid categoryId)
-	{
-		return categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "Unknown";
 	}
 }
