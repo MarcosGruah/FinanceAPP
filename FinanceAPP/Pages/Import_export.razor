@@ -1,6 +1,6 @@
 ﻿@page "/Import_export"
 @using FinanceAPP.Models
-@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject FinanceAPP.Services.DataBackupService backupService
 @inject IJSRuntime JSRuntime
 
 <h3>Import / Export</h3>
@@ -22,22 +22,13 @@
 }
 
 @code {
-    private List<Transaction> transactions = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-        var saved = await localStorage.GetItemAsync<List<Transaction>>("transactions");
-        if (saved != null)
-        {
-            transactions = saved;
-        }
-    }
-
     private string exportMessage = "";
+    private string importMessage = "";
 
     private async Task ExportData()
     {
-        var json = System.Text.Json.JsonSerializer.Serialize(transactions, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        var backup = backupService.CreateBackup();
+        var json = System.Text.Json.JsonSerializer.Serialize(backup, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
         var fileName = $"finance-backup-{DateTime.Now:yyyy-MM-dd}.json";
 
         var bytes = System.Text.Encoding.UTF8.GetBytes(json);
@@ -46,34 +37,28 @@
 
         await JSRuntime.InvokeVoidAsync("downloadFile", fileName, dataUrl);
 
-        exportMessage = $"Exported {transactions.Count} transactions successfully!";
+        exportMessage = $"Exported {backup.Categories.Count} categories and {backup.Transactions.Count} transactions!";
     }
-
-    private string importMessage = "";
 
     private async Task ImportData(InputFileChangeEventArgs e)
     {
         try
         {
             var file = e.File;
-
-            // Read file content
             using var stream = file.OpenReadStream();
             using var reader = new System.IO.StreamReader(stream);
             var json = await reader.ReadToEndAsync();
 
-            // Deserialize
-            var importedTransactions = System.Text.Json.JsonSerializer.Deserialize<List<Transaction>>(json);
+            var backup = System.Text.Json.JsonSerializer.Deserialize<DataBackup>(json);
 
-            if (importedTransactions != null && importedTransactions.Count > 0)
+            if (backup != null)
             {
-                transactions = importedTransactions;
-                await localStorage.SetItemAsync("transactions", transactions);
-                importMessage = $"Successfully imported {transactions.Count} transactions!";
+                await backupService.RestoreBackup(backup);
+                importMessage = $"Successfully imported {backup.Categories.Count} categories and {backup.Transactions.Count} transactions!";
             }
             else
             {
-                importMessage = "No transactions found in file.";
+                importMessage = "No data found in file.";
             }
         }
         catch (Exception ex)
