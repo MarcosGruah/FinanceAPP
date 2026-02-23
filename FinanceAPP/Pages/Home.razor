@@ -21,7 +21,8 @@ else
 			var (year, monthNum) = month.Key;
 			var (income, expenses) = month.Value;
 			var balance = income - expenses;
-			<li>@year / @monthNum: Income = R$ @income, Expenses = R$ @expenses, Balance = R$ @balance</li>
+			var monthName = new DateTime(year, monthNum, 1).ToString("yyyy / MMMM", CultureInfo.InvariantCulture);
+			<li>@monthName: Income = R$ @income, Expenses = R$ @expenses, Balance = R$ @balance</li>
 		}
 	</ul>
 }

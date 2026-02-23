@@ -6,15 +6,21 @@
 
 <h3>Add Transaction</h3>
 
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
 <div>
 	<label>Category:</label>
-	<InputSelect @bind-Value="newTransaction.CategoryId">
-		<option value="">-- Select Category --</option>
-		@foreach (var c in categoryService.Categories)
-		{
-			<option value="@c.Id.ToString()">@c.Name</option>
-		}
-	</InputSelect>
+		<InputSelect @bind-Value="newTransaction.CategoryId">
+			<option value="@Guid.Empty.ToString()">-- Select Category --</option>
+			@foreach (var c in categoryService.Categories)
+			{
+				<option value="@c.Id.ToString()">@c.Name</option>
+			}
+		</InputSelect>
 </div>
 
 <div>
@@ -45,7 +51,7 @@
 <button @onclick="AddTransaction">
 	@(editingTransaction == null ? "Add Transaction" : "Save Changes")
 </button>
-
+}
 <hr />
 
 <h3>All Transactions</h3>
@@ -70,12 +76,14 @@ else
 	private Transaction? editingTransaction = null;
 	private Transaction newTransaction = new();
 	private DateOnly operationDateInput = DateOnly.FromDateTime(DateTime.Now);
+	private bool isLoading = true;  // Add this
 
 
 	protected override async Task OnInitializedAsync()
 	{
 		await categoryService.LoadAsync();
 		await transactionService.LoadAsync();
+		isLoading = false;  // Add this
 	}
 
 	private async Task AddTransaction()
