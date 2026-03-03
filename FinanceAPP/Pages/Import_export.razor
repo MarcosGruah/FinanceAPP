@@ -3,10 +3,10 @@
 @inject FinanceAPP.Services.DataBackupService backupService
 @inject IJSRuntime JSRuntime
 
-<h3>Import / Export</h3>
+<h3>Importar / Exportar</h3>
 
-<h4>Export</h4>
-<button @onclick="ExportData">Export Data</button>
+<h4>Exportar</h4>
+<button @onclick="ExportData">Exportar Dados</button>
 @if (!string.IsNullOrEmpty(exportMessage))
 {
     <p>@exportMessage</p>
@@ -14,7 +14,7 @@
 
 <hr />
 
-<h4>Import</h4>
+<h4>Importar</h4>
 <InputFile OnChange="ImportData" accept=".json" />
 @if (!string.IsNullOrEmpty(importMessage))
 {
@@ -54,16 +54,16 @@
             if (backup != null)
             {
                 await backupService.RestoreBackup(backup);
-                importMessage = $"Successfully imported {backup.Categories.Count} categories and {backup.Transactions.Count} transactions!";
+                importMessage = $"Importação realizada com sucesso! {backup.Categories.Count} categorias e {backup.Transactions.Count} transações.";
             }
             else
             {
-                importMessage = "No data found in file.";
+                importMessage = "Dados não encontrados no arquivo selecionado.";
             }
         }
         catch (Exception ex)
         {
-            importMessage = $"Error importing: {ex.Message}";
+            importMessage = $"Erro de importação: {ex.Message}";
         }
     }
 }

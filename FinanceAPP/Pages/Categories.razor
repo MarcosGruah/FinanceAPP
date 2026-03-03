@@ -3,25 +3,25 @@
 @using System.Globalization
 @inject FinanceAPP.Services.CategoryService categoryService
 
-<h3>Transaction Category</h3>
+<h3>Categorias de Transação</h3>
 
 <div>
-	<label>Category:</label>
+	<label>Categoria:</label>
 	<input @bind="newCategory.Name" />
 </div>
 <div>
-	<label>Description:</label>
+	<label>Descrição:</label>
 	<input @bind="newCategory.Description" />
 </div>
 
 <button @onclick="AddCategory">
-	@(editingCategory == null ? "Add Category" : "Save Changes")
+	@(editingCategory == null ? "Adicionar" : "Salvar")
 </button>
 
-<h3>All Categories</h3>
+<h3>Todas as Categorias</h3>
 @if (categoryService.Categories.Count == 0)
 {
-	<p>No categories yet.</p>
+	<p>Nenhuma categoria encontrada.</p>
 }
 else
 {
@@ -29,8 +29,8 @@ else
 		@foreach (var c in categoryService.Categories)
 		{
 			<li>@c.Name - @c.Description</li>
-			<button @onclick="(() => RemoveCategory(c))">Remove</button>
-			<button @onclick="(() => StartEdit(c))">Edit</button>
+			<button @onclick="(() => RemoveCategory(c))">Remover</button>
+			<button @onclick="(() => StartEdit(c))">Editar</button>
 		}
 	</ul>
 }

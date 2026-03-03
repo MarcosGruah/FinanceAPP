@@ -6,12 +6,12 @@
 
 <PageTitle>Home</PageTitle>
 
-<h2>Summary</h2>
+<h2>Resumo</h2>
 
 
 @if (monthlySummary.Count == 0)
 {
-	<p>No data to summarize yet.</p>
+	<p>Sem dados para resumir.</p>
 }
 else
 {
@@ -22,17 +22,17 @@ else
 			var (income, expenses) = month.Value;
 			var balance = income - expenses;
 			var monthName = new DateTime(year, monthNum, 1).ToString("yyyy / MMMM", CultureInfo.InvariantCulture);
-			<li>@monthName: Income = R$ @income, Expenses = R$ @expenses, Balance = R$ @balance</li>
+			<li>@monthName: Receita = R$ @income, Despesas = R$ @expenses, Saldo = R$ @balance</li>
 		}
 	</ul>
 }
 
-<h2>Category Summary</h2>
+<h2>Resumo por Categoria</h2>
 
-<h3>Income by Category</h3>
+<h3>Receita por Categoria</h3>
 @if (incomeByCategory.Count == 0)
 {
-	<p>No income recorded yet.</p>
+	<p>Receita não encontrada.</p>
 }
 else
 {

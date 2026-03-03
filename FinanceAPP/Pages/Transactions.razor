@@ -4,18 +4,18 @@
 @inject FinanceAPP.Services.CategoryService categoryService
 @inject FinanceAPP.Services.TransactionService transactionService
 
-<h3>Add Transaction</h3>
+<h3>Adicionar Transação</h3>
 
 @if (isLoading)
 {
-    <p>Loading...</p>
+    <p>Carregando...</p>
 }
 else
 {
 <div>
 	<label>Category:</label>
 		<InputSelect @bind-Value="newTransaction.CategoryId">
-			<option value="@Guid.Empty.ToString()">-- Select Category --</option>
+			<option value="@Guid.Empty.ToString()">-- Selecionar Categoria --</option>
 			@foreach (var c in categoryService.Categories)
 			{
 				<option value="@c.Id.ToString()">@c.Name</option>
@@ -24,17 +24,17 @@ else
 </div>
 
 <div>
-	<label>Description:</label>
+	<label>Descrição:</label>
 	<input @bind="newTransaction.Description" />
 </div>
 
 <div>
-	<label>Amount:</label>
+	<label>Valor:</label>
 	<input type="number" @bind="newTransaction.Amount" />
 </div>
 
 <div>
-	<label>Transaction Type:</label>
+	<label>Tipo de Transação:</label>
 	<InputSelect @bind-Value="newTransaction.Type">
 		@foreach (var type in Enum.GetValues<Transaction.TransactionType>())
 		{
@@ -44,21 +44,21 @@ else
 </div>
 
 <div>
-	<label>Date (dd/MM/yyyy):</label>
+	<label>Data (dd/MM/yyyy):</label>
 	<input type="date" @bind="operationDateInput" />
 </div>
 
 <button @onclick="AddTransaction">
-	@(editingTransaction == null ? "Add Transaction" : "Save Changes")
+	@(editingTransaction == null ? "Adicionar" : "Salvar")
 </button>
 }
 <hr />
 
-<h3>All Transactions</h3>
+<h3>Todas as Transações</h3>
 
 @if (transactionService.Transactions.Count == 0)
 {
-	<p>No transactions yet.</p>
+	<p>Transações não encontradas.</p>
 }
 else
 {
@@ -66,8 +66,8 @@ else
 		@foreach (var t in transactionService.Transactions)
 		{
 			<li>@t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @categoryService.GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount</li>
-			<button @onclick="(() => RemoveTransaction(t))">Remove</button>
-			<button @onclick="(() => StartEdit(t))">Edit</button>
+			<button @onclick="(() => RemoveTransaction(t))">Remover</button>
+			<button @onclick="(() => StartEdit(t))">Editar</button>
 		}
 	</ul>
 }
