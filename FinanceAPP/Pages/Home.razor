@@ -22,68 +22,75 @@ else
 			var (income, expenses) = month.Value;
 			var balance = income - expenses;
 			var monthName = new DateTime(year, monthNum, 1).ToString("yyyy / MMMM", CultureInfo.InvariantCulture);
-			<li>@monthName: Receita = R$ @income, Despesas = R$ @expenses, Saldo = R$ @balance</li>
+			<li>@monthName: Receita = R$ @income.ToString("F2"), Despesas = R$ @expenses.ToString("F2"), Saldo = R$ @balance.ToString("F2")</li>
 		}
 	</ul>
 }
 
 <h2>Resumo por Categoria</h2>
 
-<h3>Receita por Categoria</h3>
+<h3>Receitas por Categoria</h3>
 @if (incomeByCategory.Count == 0)
 {
-	<p>Receita não encontrada.</p>
+	<p>Nenhuma receita registrada.</p>
 }
 else
 {
-	<ul>
-		@foreach (var item in incomeByCategory)
-		{
-			<li>@categoryService.GetCategoryName(item.Key): R$ @item.Value</li>
-		}
-	</ul>
-	<p><strong>Total Income: R$ @incomeByCategory.Values.Sum()</strong></p>
+	@foreach (var month in incomeByCategory.OrderBy(m => m.Key))
+	{
+		var monthName = new DateTime(month.Key.year, month.Key.month, 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+		<h4>@monthName</h4>
+		<ul>
+			@foreach (var item in month.Value.OrderByDescending(x => x.Value))
+			{
+				<li>@categoryService.GetCategoryName(item.Key): R$ @item.Value.ToString("N2")</li>
+			}
+		</ul>
+		<p><strong>Subtotal: R$ @month.Value.Values.Sum().ToString("N2")</strong></p>
+	}
+	<p><strong>Total de Receitas: R$ @incomeByCategory.SelectMany(m => m.Value.Values).Sum().ToString("N2")</strong></p>
 }
 
-<h3>Expenses by Category</h3>
+<h3>Gastos por Categoria</h3>
 @if (expensesByCategory.Count == 0)
 {
-	<p>No expenses recorded yet.</p>
+	<p>Nenhum gasto registrado.</p>
 }
 else
 {
-	<ul>
-		@foreach (var item in expensesByCategory)
-		{
-			<li>@categoryService.GetCategoryName(item.Key): R$ @item.Value</li>
-		}
-	</ul>
-	<p><strong>Total Expenses: R$ @expensesByCategory.Values.Sum()</strong></p>
+	@foreach (var month in expensesByCategory.OrderBy(m => m.Key))
+	{
+		var monthName = new DateTime(month.Key.year, month.Key.month, 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+		<h4>@monthName</h4>
+		<ul>
+			@foreach (var item in month.Value.OrderByDescending(x => x.Value))
+			{
+				<li>@categoryService.GetCategoryName(item.Key): R$ @item.Value.ToString("N2")</li>
+			}
+		</ul>
+		<p><strong>Subtotal: R$ @month.Value.Values.Sum().ToString("N2")</strong></p>
+	}
+	<p><strong>Total de Gastos: R$ @expensesByCategory.SelectMany(m => m.Value.Values).Sum().ToString("N2")</strong></p>
 }
 
-
-
-<h3>All Transactions</h3>
-
+<h3>Todas as Transações</h3>
 @if (transactionService.Transactions.Count == 0)
 {
-	<p>No transactions yet.</p>
+	<p>Nenhuma transação encontrada.</p>
 }
 else
 {
 	<ul>
-		@foreach (var t in transactionService.Transactions)
+		@foreach (var t in transactionService.Transactions.OrderBy(x => x.OperationDate))
 		{
-			<li>  @t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @categoryService.GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount</li>
+			<li>  @t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @categoryService.GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount.ToString("F2")</li>
 		}
 	</ul>
 }
-
-<h3>All Categories</h3>
-
+<h3>Todas as Categorias</h3>
 @if (categoryService.Categories.Count == 0)
 {
-	<p>No categories yet.</p>
+	<p>Nenhuma categoria encontrada.</p>
 }
 else
 {
@@ -97,8 +104,8 @@ else
 
 @code{
 	Dictionary<(int year, int month), (decimal income, decimal expenses)> monthlySummary = new();
-	Dictionary<Guid, decimal> incomeByCategory = new();
-	Dictionary<Guid, decimal> expensesByCategory = new();
+	Dictionary<(int year, int month), Dictionary<Guid, decimal>> incomeByCategory = new();
+	Dictionary<(int year, int month), Dictionary<Guid, decimal>> expensesByCategory = new();
 
 
 	protected override async Task OnInitializedAsync()
@@ -140,33 +147,28 @@ else
 	{
 		foreach (Transaction transaction in transactionService.Transactions)
 		{
-			Guid categoryId = transaction.CategoryId;  // This is the key
+			var monthKey = (transaction.OperationDate.Year, transaction.OperationDate.Month);
+			var categoryId = transaction.CategoryId;
 
 			if (transaction.Type == Transaction.TransactionType.Income)
 			{
-				// Check if "Income" (or whatever category) already exists in dictionary
-				if (!incomeByCategory.ContainsKey(categoryId))
-				{
-					// First time seeing this category, add it with this amount
-					incomeByCategory[categoryId] = transaction.Amount;
-				}
-				else
-				{
-					// Category already exists, add to existing total
-					incomeByCategory[categoryId] += transaction.Amount;
-				}
+				if (!incomeByCategory.ContainsKey(monthKey))
+					incomeByCategory[monthKey] = new Dictionary<Guid, decimal>();
+
+				if (!incomeByCategory[monthKey].ContainsKey(categoryId))
+					incomeByCategory[monthKey][categoryId] = 0;
+
+				incomeByCategory[monthKey][categoryId] += transaction.Amount;
 			}
 			else if (transaction.Type == Transaction.TransactionType.Expense)
 			{
-				// Same thing for expenses
-				if (!expensesByCategory.ContainsKey(categoryId))
-				{
-					expensesByCategory[categoryId] = transaction.Amount;
-				}
-				else
-				{
-					expensesByCategory[categoryId] += transaction.Amount;
-				}
+				if (!expensesByCategory.ContainsKey(monthKey))
+					expensesByCategory[monthKey] = new Dictionary<Guid, decimal>();
+
+				if (!expensesByCategory[monthKey].ContainsKey(categoryId))
+					expensesByCategory[monthKey][categoryId] = 0;
+
+				expensesByCategory[monthKey][categoryId] += transaction.Amount;
 			}
 		}
 	}

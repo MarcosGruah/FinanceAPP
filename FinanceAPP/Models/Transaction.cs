@@ -23,6 +23,11 @@
         /// </summary>
         public DateOnly OperationDate { get; set; }
 
+        /// <summary>
+        /// Links this transaction to a recurring template (null if not recurring)
+        /// </summary>
+        public Guid? RecurringTransactionId { get; set; }
+
         // Parameterless constructor for deserialization
         public Transaction()
         {

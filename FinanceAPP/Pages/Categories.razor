@@ -4,7 +4,6 @@
 @inject FinanceAPP.Services.CategoryService categoryService
 
 <h3>Categorias de Transação</h3>
-
 <div>
 	<label>Categoria:</label>
 	<input @bind="newCategory.Name" />
@@ -13,11 +12,9 @@
 	<label>Descrição:</label>
 	<input @bind="newCategory.Description" />
 </div>
-
 <button @onclick="AddCategory">
 	@(editingCategory == null ? "Adicionar" : "Salvar")
 </button>
-
 <h3>Todas as Categorias</h3>
 @if (categoryService.Categories.Count == 0)
 {

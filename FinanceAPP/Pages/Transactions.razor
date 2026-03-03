@@ -3,17 +3,17 @@
 @using System.Globalization
 @inject FinanceAPP.Services.CategoryService categoryService
 @inject FinanceAPP.Services.TransactionService transactionService
+@inject FinanceAPP.Services.RecurringTransactionService recurringService
 
 <h3>Adicionar Transação</h3>
-
 @if (isLoading)
 {
-    <p>Carregando...</p>
+	<p>Carregando...</p>
 }
 else
 {
-<div>
-	<label>Category:</label>
+	<div>
+		<label>Categoria:</label>
 		<InputSelect @bind-Value="newTransaction.CategoryId">
 			<option value="@Guid.Empty.ToString()">-- Selecionar Categoria --</option>
 			@foreach (var c in categoryService.Categories)
@@ -21,51 +21,110 @@ else
 				<option value="@c.Id.ToString()">@c.Name</option>
 			}
 		</InputSelect>
-</div>
+	</div>
+	<div>
+		<label>Descrição:</label>
+		<input @bind="newTransaction.Description" />
+	</div>
+	<div>
+		<label>Valor:</label>
+		<input type="number" step="0.01" @bind="newTransaction.Amount" />
+	</div>
+	<div>
+		<label>Tipo de Transação:</label>
+		<InputSelect @bind-Value="newTransaction.Type">
+			@foreach (var type in Enum.GetValues<Transaction.TransactionType>())
+			{
+				<option value="@type.ToString()">@type</option>
+			}
+		</InputSelect>
+	</div>
+	<div>
+		<label>Data (dd/MM/yyyy):</label>
+		<input type="date" @bind="operationDateInput" />
+	</div>
 
-<div>
-	<label>Descrição:</label>
-	<input @bind="newTransaction.Description" />
-</div>
+	<div>
+		<label>
+			<input type="checkbox" @bind="isRecurring" />
+			Transação Recorrente?
+		</label>
+	</div>
 
-<div>
-	<label>Valor:</label>
-	<input type="number" @bind="newTransaction.Amount" />
-</div>
+	@if (isRecurring)
+	{
+		<div style="border: 1px solid #ccc; padding: 10px; margin-top: 10px;">
+			<h4>Configuração de Recorrência</h4>
 
-<div>
-	<label>Tipo de Transação:</label>
-	<InputSelect @bind-Value="newTransaction.Type">
-		@foreach (var type in Enum.GetValues<Transaction.TransactionType>())
-		{
-			<option value="@type.ToString()">@type</option>
-		}
-	</InputSelect>
-</div>
+			<div>
+				<label>Tipo de Recorrência:</label>
+				<InputSelect @bind-Value="recurrenceType">
+					<option value="@RecurrenceType.DayOfMonth.ToString()">Dia do Mês (ex: todo dia 8)</option>
+					<option value="@RecurrenceType.EveryXDays.ToString()">A cada X dias</option>
+				</InputSelect>
+			</div>
 
-<div>
-	<label>Data (dd/MM/yyyy):</label>
-	<input type="date" @bind="operationDateInput" />
-</div>
+			@if (recurrenceType == RecurrenceType.DayOfMonth)
+			{
+				<div>
+					<label>Dia do Mês (1-31):</label>
+					<input type="number" min="1" max="31" @bind="dayOfMonth" />
+				</div>
+			}
+			else
+			{
+				<div>
+					<label>Repetir a cada quantos dias:</label>
+					<input type="number" min="1" @bind="intervalDays" />
+				</div>
+			}
 
-<button @onclick="AddTransaction">
-	@(editingTransaction == null ? "Adicionar" : "Salvar")
-</button>
+			<div>
+				<label>Número de ocorrências:</label>
+				<input type="number" min="1" @bind="totalOccurrences" />
+			</div>
+
+			@if (totalOccurrences > 0)
+			{
+				<div style="margin-top: 10px;">
+					<h5>Preview das datas:</h5>
+					<ul>
+						@foreach (var date in GetPreviewDates())
+						{
+							<li>@date.ToString("dd/MM/yyyy")</li>
+						}
+					</ul>
+				</div>
+			}
+		</div>
+	}
+
+	<button @onclick="AddTransaction">
+		@(editingTransaction == null ? "Adicionar" : "Salvar")
+	</button>
 }
 <hr />
-
 <h3>Todas as Transações</h3>
-
 @if (transactionService.Transactions.Count == 0)
 {
-	<p>Transações não encontradas.</p>
+	<p>Nenhuma transação encontrada.</p>
 }
 else
 {
 	<ul>
-		@foreach (var t in transactionService.Transactions)
+		@foreach (var t in transactionService.Transactions.OrderByDescending(x => x.OperationDate))
 		{
-			<li>@t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @categoryService.GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount</li>
+			<li>
+				@t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) -
+				@t.Type -
+				@categoryService.GetCategoryName(t.CategoryId) -
+				@t.Description -
+				R$ @t.Amount.ToString("F2")
+				@if (t.RecurringTransactionId != null)
+				{
+					<span style="color: blue;">(Recorrente)</span>
+				}
+			</li>
 			<button @onclick="(() => RemoveTransaction(t))">Remover</button>
 			<button @onclick="(() => StartEdit(t))">Editar</button>
 		}
@@ -76,56 +135,118 @@ else
 	private Transaction? editingTransaction = null;
 	private Transaction newTransaction = new();
 	private DateOnly operationDateInput = DateOnly.FromDateTime(DateTime.Now);
-	private bool isLoading = true;  // Add this
+	private bool isLoading = true;
 
+	// Campos de recorrência
+	private bool isRecurring = false;
+	private RecurrenceType recurrenceType = RecurrenceType.DayOfMonth;
+	private int dayOfMonth = 1;
+	private int intervalDays = 7;
+	private int totalOccurrences = 1;
 
 	protected override async Task OnInitializedAsync()
 	{
 		await categoryService.LoadAsync();
 		await transactionService.LoadAsync();
-		isLoading = false;  // Add this
+		await recurringService.LoadAsync();
+		isLoading = false;
 	}
 
 	private async Task AddTransaction()
 	{
 		if (editingTransaction == null)
 		{
-			// Adding new transaction
-			newTransaction.OperationDate = operationDateInput;
-			await transactionService.AddAsync(newTransaction);
+			if (isRecurring)
+			{
+				// Criar template recorrente
+				var template = new RecurringTransaction
+				{
+					CategoryId = newTransaction.CategoryId,
+					Description = newTransaction.Description,
+					Amount = newTransaction.Amount,
+					Type = newTransaction.Type,
+					RecurrenceType = recurrenceType,
+					DayOfMonth = recurrenceType == RecurrenceType.DayOfMonth ? dayOfMonth : null,
+					IntervalDays = recurrenceType == RecurrenceType.EveryXDays ? intervalDays : null,
+					StartDate = operationDateInput,
+					TotalOccurrences = totalOccurrences
+				};
+
+				// Salvar template
+				await recurringService.AddAsync(template);
+
+				// Gerar transações
+				var generatedTransactions = recurringService.GenerateTransactions(template);
+
+				// Salvar todas as transações
+				foreach (var transaction in generatedTransactions)
+				{
+					await transactionService.AddAsync(transaction);
+				}
+			}
+			else
+			{
+				// Transação única normal
+				newTransaction.OperationDate = operationDateInput;
+				await transactionService.AddAsync(newTransaction);
+			}
 		}
 		else
 		{
-			// Editing existing transaction
+			// Edição de transação existente
 			editingTransaction.CategoryId = newTransaction.CategoryId;
 			editingTransaction.Description = newTransaction.Description;
 			editingTransaction.Type = newTransaction.Type;
 			editingTransaction.Amount = newTransaction.Amount;
 			editingTransaction.OperationDate = operationDateInput;
 			await transactionService.UpdateAsync(editingTransaction);
-			editingTransaction = null;  // Done editing
+			editingTransaction = null;
 		}
 
 		// Reset form
-		newTransaction = new();
-		operationDateInput = DateOnly.FromDateTime(DateTime.Now);
+		ResetForm();
 	}
 
 	private async Task RemoveTransaction(Transaction t)
 	{
 		await transactionService.DeleteAsync(t);
-
 	}
 
 	private void StartEdit(Transaction t)
 	{
-		editingTransaction = t;  // Mark this transaction as being edited
-
-		// Populate the form with this transaction's data
+		editingTransaction = t;
 		newTransaction.CategoryId = t.CategoryId;
 		newTransaction.Description = t.Description;
 		newTransaction.Type = t.Type;
 		newTransaction.Amount = t.Amount;
 		operationDateInput = t.OperationDate;
+
+		// Desabilita recorrência ao editar
+		isRecurring = false;
+	}
+
+	private void ResetForm()
+	{
+		newTransaction = new();
+		operationDateInput = DateOnly.FromDateTime(DateTime.Now);
+		isRecurring = false;
+		dayOfMonth = 1;
+		intervalDays = 7;
+		totalOccurrences = 1;
+	}
+
+	private List<DateOnly> GetPreviewDates()
+	{
+		var preview = new RecurringTransaction
+		{
+			RecurrenceType = recurrenceType,
+			DayOfMonth = recurrenceType == RecurrenceType.DayOfMonth ? dayOfMonth : null,
+			IntervalDays = recurrenceType == RecurrenceType.EveryXDays ? intervalDays : null,
+			StartDate = operationDateInput,
+			TotalOccurrences = Math.Min(totalOccurrences, 12) // Limita preview a 12
+		};
+
+		var transactions = recurringService.GenerateTransactions(preview);
+		return transactions.Select(t => t.OperationDate).ToList();
 	}
 }

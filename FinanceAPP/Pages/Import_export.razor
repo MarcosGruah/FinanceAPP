@@ -37,7 +37,7 @@
 
         await JSRuntime.InvokeVoidAsync("downloadFile", fileName, dataUrl);
 
-        exportMessage = $"Exported {backup.Categories.Count} categories and {backup.Transactions.Count} transactions!";
+        exportMessage = $"Exportados {backup.Categories.Count} categorias e {backup.Transactions.Count} transações!";
     }
 
     private async Task ImportData(InputFileChangeEventArgs e)

@@ -13,5 +13,6 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<DataBackupService>();
+builder.Services.AddScoped<RecurringTransactionService>();
 
 await builder.Build().RunAsync();
