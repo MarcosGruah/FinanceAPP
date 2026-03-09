@@ -3,116 +3,202 @@
 @using System.Globalization
 @inject FinanceAPP.Services.CategoryService categoryService
 @inject FinanceAPP.Services.TransactionService transactionService
-
 <PageTitle>Home</PageTitle>
 
-<h2>Resumo</h2>
+<div class="container-fluid">
+	<h2 class="mb-4">Resumo Financeiro</h2>
 
-
-@if (monthlySummary.Count == 0)
-{
-	<p>Sem dados para resumir.</p>
-}
-else
-{
-	<ul>
-		@foreach (var month in monthlySummary)
-		{
-			var (year, monthNum) = month.Key;
-			var (income, expenses) = month.Value;
-			var balance = income - expenses;
-			var monthName = new DateTime(year, monthNum, 1).ToString("yyyy / MMMM", CultureInfo.InvariantCulture);
-			<li>@monthName: Receita = R$ @income.ToString("F2"), Despesas = R$ @expenses.ToString("F2"), Saldo = R$ @balance.ToString("F2")</li>
-		}
-	</ul>
-}
-
-<h2>Resumo por Categoria</h2>
-
-<h3>Receitas por Categoria</h3>
-@if (incomeByCategory.Count == 0)
-{
-	<p>Nenhuma receita registrada.</p>
-}
-else
-{
-	@foreach (var month in incomeByCategory.OrderBy(m => m.Key))
+	@if (availableMonths.Count > 0)
 	{
-		var monthName = new DateTime(month.Key.year, month.Key.month, 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture);
-		<h4>@monthName</h4>
-		<ul>
-			@foreach (var item in month.Value.OrderByDescending(x => x.Value))
-			{
-				<li>@categoryService.GetCategoryName(item.Key): R$ @item.Value.ToString("N2")</li>
-			}
-		</ul>
-		<p><strong>Subtotal: R$ @month.Value.Values.Sum().ToString("N2")</strong></p>
+		<div class="mb-4">
+			<label class="form-label fw-bold">Selecione o mês:</label>
+			<select class="form-select" style="max-width: 300px;" @onchange="OnMonthChanged">
+				@foreach (var month in availableMonths)
+				{
+					var monthText = FormatMonthName(month.year, month.month);
+					var isSelected = selectedMonth.HasValue && selectedMonth.Value == month;
+					<option value="@month.year-@month.month" selected="@isSelected">@monthText</option>
+				}
+			</select>
+		</div>
 	}
-	<p><strong>Total de Receitas: R$ @incomeByCategory.SelectMany(m => m.Value.Values).Sum().ToString("N2")</strong></p>
-}
 
-<h3>Gastos por Categoria</h3>
-@if (expensesByCategory.Count == 0)
-{
-	<p>Nenhum gasto registrado.</p>
-}
-else
-{
-	@foreach (var month in expensesByCategory.OrderBy(m => m.Key))
+	@if (selectedMonth.HasValue)
 	{
-		var monthName = new DateTime(month.Key.year, month.Key.month, 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture);
-		<h4>@monthName</h4>
-		<ul>
-			@foreach (var item in month.Value.OrderByDescending(x => x.Value))
-			{
-				<li>@categoryService.GetCategoryName(item.Key): R$ @item.Value.ToString("N2")</li>
-			}
-		</ul>
-		<p><strong>Subtotal: R$ @month.Value.Values.Sum().ToString("N2")</strong></p>
+		var monthData = monthlySummary.ContainsKey(selectedMonth.Value) ? monthlySummary[selectedMonth.Value] : (0m, 0m);
+		var monthName = FormatMonthName(selectedMonth.Value.year, selectedMonth.Value.month);
+		var (income, expenses) = monthData;
+		var balance = income - expenses;
+
+		<h3 class="mb-3">@monthName</h3>
+
+		<div class="row mb-4">
+			<div class="col-md-4 mb-3">
+				<div class="card text-white bg-success">
+					<div class="card-body">
+						<h5 class="card-title">Receitas</h5>
+						<p class="card-text fs-4">R$ @income.ToString("N2")</p>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-4 mb-3">
+				<div class="card text-white bg-danger">
+					<div class="card-body">
+						<h5 class="card-title">Despesas</h5>
+						<p class="card-text fs-4">R$ @expenses.ToString("N2")</p>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-4 mb-3">
+				<div class="card text-white @(balance >= 0 ? "bg-primary" : "bg-warning")">
+					<div class="card-body">
+						<h5 class="card-title">Saldo</h5>
+						<p class="card-text fs-4">R$ @balance.ToString("N2")</p>
+					</div>
+				</div>
+			</div>
+		</div>
 	}
-	<p><strong>Total de Gastos: R$ @expensesByCategory.SelectMany(m => m.Value.Values).Sum().ToString("N2")</strong></p>
-}
 
-<h3>Todas as Transações</h3>
-@if (transactionService.Transactions.Count == 0)
-{
-	<p>Nenhuma transação encontrada.</p>
-}
-else
-{
-	<ul>
-		@foreach (var t in transactionService.Transactions.OrderBy(x => x.OperationDate))
-		{
-			<li>  @t.OperationDate.ToString("dd/MM/yy", CultureInfo.InvariantCulture) - @t.Type - @categoryService.GetCategoryName(t.CategoryId) - @t.Description - R$ @t.Amount.ToString("F2")</li>
-		}
-	</ul>
-}
-<h3>Todas as Categorias</h3>
-@if (categoryService.Categories.Count == 0)
-{
-	<p>Nenhuma categoria encontrada.</p>
-}
-else
-{
-	<ul>
-		@foreach (var c in categoryService.Categories)
-		{
-			<li>  @c.Name - @c.Description</li>
-		}
-	</ul>
-}
+	<div class="row">
+		<div class="col-lg-6 mb-4">
+			<div class="card">
+				<div class="card-header bg-success text-white">
+					<h4 class="mb-0">Receitas por Categoria</h4>
+				</div>
+				<div class="card-body">
+					@if (!incomeByCategory.Any())
+					{
+						<p class="text-muted">Nenhuma receita registrada neste mês.</p>
+					}
+					else
+					{
+						<ul class="list-group list-group-flush">
+							@foreach (var item in incomeByCategory.OrderByDescending(x => x.Value))
+							{
+								<li class="list-group-item d-flex justify-content-between align-items-center">
+									@categoryService.GetCategoryName(item.Key)
+									<span class="badge bg-success rounded-pill">R$ @item.Value.ToString("N2")</span>
+								</li>
+							}
+						</ul>
+						<div class="mt-3 p-2 bg-light rounded">
+							<strong>Total: R$ @incomeByCategory.Values.Sum().ToString("N2")</strong>
+						</div>
+					}
+				</div>
+			</div>
+		</div>
 
-@code{
+		<div class="col-lg-6 mb-4">
+			<div class="card">
+				<div class="card-header bg-danger text-white">
+					<h4 class="mb-0">Gastos por Categoria</h4>
+				</div>
+				<div class="card-body">
+					@if (!expensesByCategory.Any())
+					{
+						<p class="text-muted">Nenhum gasto registrado neste mês.</p>
+					}
+					else
+					{
+						<ul class="list-group list-group-flush">
+							@foreach (var item in expensesByCategory.OrderByDescending(x => x.Value))
+							{
+								<li class="list-group-item d-flex justify-content-between align-items-center">
+									@categoryService.GetCategoryName(item.Key)
+									<span class="badge bg-danger rounded-pill">R$ @item.Value.ToString("N2")</span>
+								</li>
+							}
+						</ul>
+						<div class="mt-3 p-2 bg-light rounded">
+							<strong>Total: R$ @expensesByCategory.Values.Sum().ToString("N2")</strong>
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="card mb-4">
+		<div class="card-header bg-info text-white">
+			<h4 class="mb-0">Todas as Transações do Mês</h4>
+		</div>
+		<div class="card-body">
+			@if (selectedMonth.HasValue)
+			{
+				var monthTransactions = transactionService.Transactions
+				.Where(t => t.OperationDate.Year == selectedMonth.Value.year && t.OperationDate.Month == selectedMonth.Value.month)
+				.OrderByDescending(x => x.OperationDate)
+				.ToList();
+
+				@if (monthTransactions.Count == 0)
+				{
+					<p class="text-muted">Nenhuma transação encontrada neste mês.</p>
+				}
+				else
+				{
+					<div class="table-responsive">
+						<table class="table table-hover">
+							<thead class="table-light">
+								<tr>
+									<th>Data</th>
+									<th>Tipo</th>
+									<th>Categoria</th>
+									<th>Descrição</th>
+									<th class="text-end">Valor</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var t in monthTransactions)
+								{
+									var rowClass = t.Type == Transaction.TransactionType.Income ? "table-success" : "table-danger";
+									<tr class="@rowClass">
+										<td>@t.OperationDate.ToString("dd/MM/yyyy")</td>
+										<td>
+											<span class="badge @(t.Type == Transaction.TransactionType.Income ? "bg-success" : "bg-danger")">
+												@t.Type
+											</span>
+										</td>
+										<td>@categoryService.GetCategoryName(t.CategoryId)</td>
+										<td>@t.Description</td>
+										<td class="text-end fw-bold">R$ @t.Amount.ToString("N2")</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+			}
+		</div>
+	</div>
+</div>
+
+@code {
 	Dictionary<(int year, int month), (decimal income, decimal expenses)> monthlySummary = new();
-	Dictionary<(int year, int month), Dictionary<Guid, decimal>> incomeByCategory = new();
-	Dictionary<(int year, int month), Dictionary<Guid, decimal>> expensesByCategory = new();
-
+	Dictionary<Guid, decimal> incomeByCategory = new();
+	Dictionary<Guid, decimal> expensesByCategory = new();
+	private List<(int year, int month)> availableMonths = new();
+	private (int year, int month)? selectedMonth = null;
 
 	protected override async Task OnInitializedAsync()
 	{
-
 		await categoryService.LoadAsync();
 		await transactionService.LoadAsync();
+
+		availableMonths = transactionService.Transactions
+			.Select(t => (t.OperationDate.Year, t.OperationDate.Month))
+			.Distinct()
+			.OrderByDescending(m => m)
+			.ToList();
+
+		if (availableMonths.Count > 0)
+		{
+			var now = DateTime.Now;
+			selectedMonth = availableMonths.FirstOrDefault(m => m.year == now.Year && m.month == now.Month);
+			if (selectedMonth == null || selectedMonth.Value == default)
+				selectedMonth = availableMonths.First();
+		}
 
 		BuildMonthSummary();
 		BuildCategorySummary();
@@ -120,18 +206,18 @@ else
 
 	private void BuildMonthSummary()
 	{
+		monthlySummary.Clear();
+
 		foreach (Transaction transaction in transactionService.Transactions)
 		{
 			(int year, int month) key = (transaction.OperationDate.Year, transaction.OperationDate.Month);
-
 			if (!monthlySummary.ContainsKey(key))
 			{
 				monthlySummary[key] = (0m, 0m);
 			}
 
-			(decimal currentIncome, decimal currentExpense) = monthlySummary[key];
-
-			if(transaction.Type == Transaction.TransactionType.Income)
+			var (currentIncome, currentExpense) = monthlySummary[key];
+			if (transaction.Type == Transaction.TransactionType.Income)
 			{
 				currentIncome += transaction.Amount;
 			}
@@ -145,31 +231,48 @@ else
 
 	private void BuildCategorySummary()
 	{
-		foreach (Transaction transaction in transactionService.Transactions)
+		incomeByCategory.Clear();
+		expensesByCategory.Clear();
+
+		if (selectedMonth == null) return;
+
+		var filteredTransactions = transactionService.Transactions
+			.Where(t => t.OperationDate.Year == selectedMonth.Value.year
+					 && t.OperationDate.Month == selectedMonth.Value.month);
+
+		foreach (Transaction transaction in filteredTransactions)
 		{
-			var monthKey = (transaction.OperationDate.Year, transaction.OperationDate.Month);
 			var categoryId = transaction.CategoryId;
 
 			if (transaction.Type == Transaction.TransactionType.Income)
 			{
-				if (!incomeByCategory.ContainsKey(monthKey))
-					incomeByCategory[monthKey] = new Dictionary<Guid, decimal>();
-
-				if (!incomeByCategory[monthKey].ContainsKey(categoryId))
-					incomeByCategory[monthKey][categoryId] = 0;
-
-				incomeByCategory[monthKey][categoryId] += transaction.Amount;
+				if (!incomeByCategory.ContainsKey(categoryId))
+					incomeByCategory[categoryId] = 0;
+				incomeByCategory[categoryId] += transaction.Amount;
 			}
 			else if (transaction.Type == Transaction.TransactionType.Expense)
 			{
-				if (!expensesByCategory.ContainsKey(monthKey))
-					expensesByCategory[monthKey] = new Dictionary<Guid, decimal>();
-
-				if (!expensesByCategory[monthKey].ContainsKey(categoryId))
-					expensesByCategory[monthKey][categoryId] = 0;
-
-				expensesByCategory[monthKey][categoryId] += transaction.Amount;
+				if (!expensesByCategory.ContainsKey(categoryId))
+					expensesByCategory[categoryId] = 0;
+				expensesByCategory[categoryId] += transaction.Amount;
 			}
+		}
+	}
+
+	private string FormatMonthName(int year, int month)
+	{
+		var date = new DateTime(year, month, 1);
+		var monthName = date.ToString("MMMM yyyy", new CultureInfo("pt-BR"));
+		return char.ToUpper(monthName[0]) + monthName.Substring(1);
+	}
+
+	private void OnMonthChanged(ChangeEventArgs e)
+	{
+		var parts = e.Value?.ToString()?.Split('-');
+		if (parts?.Length == 2 && int.TryParse(parts[0], out int year) && int.TryParse(parts[1], out int month))
+		{
+			selectedMonth = (year, month);
+			BuildCategorySummary();
 		}
 	}
 }

@@ -16,7 +16,7 @@ else
 		<label>Categoria:</label>
 		<InputSelect @bind-Value="newTransaction.CategoryId">
 			<option value="@Guid.Empty.ToString()">-- Selecionar Categoria --</option>
-			@foreach (var c in categoryService.Categories)
+			@foreach (var c in categoryService.Categories.OrderBy(x => x.Name))
 			{
 				<option value="@c.Id.ToString()">@c.Name</option>
 			}
