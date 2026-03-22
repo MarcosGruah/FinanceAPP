@@ -3,34 +3,81 @@
 @using System.Globalization
 @inject FinanceAPP.Services.CategoryService categoryService
 
-<h3>Categorias de Transação</h3>
-<div>
-	<label>Categoria:</label>
-	<input @bind="newCategory.Name" />
+<div class="container-fluid">
+	<h2 class="mb-4">Gerenciar Categorias</h2>
+
+	<div class="card mb-4">
+		<div class="card-header bg-primary text-white">
+			<h4 class="mb-0">@(editingCategory == null ? "Adicionar Categoria" : "Editar Categoria")</h4>
+		</div>
+		<div class="card-body">
+			<div class="row">
+				<div class="col-md-6 mb-3">
+					<label class="form-label">Categoria:</label>
+					<input class="form-control" @bind="newCategory.Name" />
+				</div>
+				<div class="col-md-6 mb-3">
+					<label class="form-label">Descrição:</label>
+					<input class="form-control" @bind="newCategory.Description" />
+				</div>
+			</div>
+			<div class="mt-3">
+				<button class="btn btn-primary btn-lg" @onclick="AddCategory">
+					<i class="bi bi-save"></i> @(editingCategory == null ? "Adicionar" : "Salvar")
+				</button>
+				@if (editingCategory != null)
+				{
+					<button class="btn btn-secondary btn-lg ms-2" @onclick="CancelEdit">
+						<i class="bi bi-x-circle"></i> Cancelar
+					</button>
+				}
+			</div>
+		</div>
+	</div>
+
+	<div class="card">
+		<div class="card-header bg-info text-white">
+			<h4 class="mb-0">Todas as Categorias</h4>
+		</div>
+		<div class="card-body">
+			@if (categoryService.Categories.Count == 0)
+			{
+				<p class="text-muted">Nenhuma categoria encontrada.</p>
+			}
+			else
+			{
+				<div class="table-responsive">
+					<table class="table table-hover">
+						<thead class="table-light">
+							<tr>
+								<th>Nome</th>
+								<th>Descrição</th>
+								<th class="text-center">Ações</th>
+							</tr>
+						</thead>
+						<tbody>
+							@foreach (var c in categoryService.Categories.OrderBy(x => x.Name))
+							{
+								<tr>
+									<td class="fw-bold">@c.Name</td>
+									<td>@c.Description</td>
+									<td class="text-center">
+										<button class="btn btn-sm btn-warning me-1" @onclick="(() => StartEdit(c))">
+											<i class="bi bi-pencil"></i> Editar
+										</button>
+										<button class="btn btn-sm btn-danger" @onclick="(() => RemoveCategory(c))">
+											<i class="bi bi-trash"></i> Remover
+										</button>
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		</div>
+	</div>
 </div>
-<div>
-	<label>Descrição:</label>
-	<input @bind="newCategory.Description" />
-</div>
-<button @onclick="AddCategory">
-	@(editingCategory == null ? "Adicionar" : "Salvar")
-</button>
-<h3>Todas as Categorias</h3>
-@if (categoryService.Categories.Count == 0)
-{
-	<p>Nenhuma categoria encontrada.</p>
-}
-else
-{
-	<ul>
-		@foreach (var c in categoryService.Categories)
-		{
-			<li>@c.Name - @c.Description</li>
-			<button @onclick="(() => RemoveCategory(c))">Remover</button>
-			<button @onclick="(() => StartEdit(c))">Editar</button>
-		}
-	</ul>
-}
 
 @code {
 	private Category? editingCategory = null;
@@ -45,19 +92,15 @@ else
 	{
 		if (editingCategory == null)
 		{
-			// Adding new transaction
 			await categoryService.AddAsync(newCategory);
 		}
 		else
 		{
-			// Editing existing transaction
 			editingCategory.Name = newCategory.Name;
 			editingCategory.Description = newCategory.Description;
 			await categoryService.UpdateAsync(editingCategory);
-			editingCategory = null;  // Done editing
+			editingCategory = null;
 		}
-
-		// Reset form
 		newCategory = new();
 	}
 
@@ -68,11 +111,14 @@ else
 
 	private void StartEdit(Category c)
 	{
-		editingCategory = c;  // Mark this transaction as being edited
-
-		// Populate the form with this transaction's data
+		editingCategory = c;
 		newCategory.Name = c.Name;
 		newCategory.Description = c.Description;
+	}
 
+	private void CancelEdit()
+	{
+		editingCategory = null;
+		newCategory = new();
 	}
 }

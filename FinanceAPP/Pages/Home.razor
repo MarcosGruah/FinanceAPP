@@ -3,6 +3,7 @@
 @using System.Globalization
 @inject FinanceAPP.Services.CategoryService categoryService
 @inject FinanceAPP.Services.TransactionService transactionService
+@inject IJSRuntime JSRuntime
 <PageTitle>Home</PageTitle>
 
 <div class="container-fluid">
@@ -73,17 +74,39 @@
 					}
 					else
 					{
-						<ul class="list-group list-group-flush">
-							@foreach (var item in incomeByCategory.OrderByDescending(x => x.Value))
-							{
-								<li class="list-group-item d-flex justify-content-between align-items-center">
-									@categoryService.GetCategoryName(item.Key)
-									<span class="badge bg-success rounded-pill">R$ @item.Value.ToString("N2")</span>
-								</li>
-							}
-						</ul>
-						<div class="mt-3 p-2 bg-light rounded">
-							<strong>Total: R$ @incomeByCategory.Values.Sum().ToString("N2")</strong>
+						decimal totalIncome = incomeByCategory.Values.Sum();
+						
+						@foreach (var item in incomeByCategory.OrderByDescending(x => x.Value))
+						{
+							decimal itemValue = item.Value;
+							decimal percentage = totalIncome > 0 ? (itemValue / totalIncome * 100) : 0;
+							string percentageStr = percentage.ToString("F1", CultureInfo.InvariantCulture);
+							string widthStr = percentage.ToString("F2", CultureInfo.InvariantCulture);
+							
+							<div class="mb-3">
+								<div class="d-flex justify-content-between align-items-center mb-1">
+									<span class="fw-bold" style="cursor: pointer; text-decoration: underline;" @onclick="async () => await FilterByCategory(item.Key)">
+										@categoryService.GetCategoryName(item.Key)
+									</span>
+									<span class="text-muted">
+										R$ @itemValue.ToString("N2")
+										<small>(@percentageStr%)</small>
+									</span>
+								</div>
+								<div class="progress" style="height: 20px;">
+									<div class="progress-bar bg-success"
+										 role="progressbar"
+										 style="width: @widthStr%"
+										 aria-valuenow="@percentage"
+										 aria-valuemin="0"
+										 aria-valuemax="100">
+									</div>
+								</div>
+							</div>
+						}
+						
+						<div class="mt-4 p-3 bg-light rounded">
+							<strong>Total de Receitas: R$ @totalIncome.ToString("N2")</strong>
 						</div>
 					}
 				</div>
@@ -102,17 +125,39 @@
 					}
 					else
 					{
-						<ul class="list-group list-group-flush">
-							@foreach (var item in expensesByCategory.OrderByDescending(x => x.Value))
-							{
-								<li class="list-group-item d-flex justify-content-between align-items-center">
-									@categoryService.GetCategoryName(item.Key)
-									<span class="badge bg-danger rounded-pill">R$ @item.Value.ToString("N2")</span>
-								</li>
-							}
-						</ul>
-						<div class="mt-3 p-2 bg-light rounded">
-							<strong>Total: R$ @expensesByCategory.Values.Sum().ToString("N2")</strong>
+						decimal totalExpenses = expensesByCategory.Values.Sum();
+						
+						@foreach (var item in expensesByCategory.OrderByDescending(x => x.Value))
+						{
+							decimal itemValue = item.Value;
+							decimal percentage = totalExpenses > 0 ? (itemValue / totalExpenses * 100) : 0;
+							string percentageStr = percentage.ToString("F1", CultureInfo.InvariantCulture);
+							string widthStr = percentage.ToString("F2", CultureInfo.InvariantCulture);
+							
+							<div class="mb-3">
+								<div class="d-flex justify-content-between align-items-center mb-1">
+									<span class="fw-bold" style="cursor: pointer; text-decoration: underline;" @onclick="async () => await FilterByCategory(item.Key)">
+										@categoryService.GetCategoryName(item.Key)
+									</span>
+									<span class="text-muted">
+										R$ @itemValue.ToString("N2")
+										<small>(@percentageStr%)</small>
+									</span>
+								</div>
+								<div class="progress" style="height: 20px;">
+									<div class="progress-bar bg-danger"
+										 role="progressbar"
+										 style="width: @widthStr%"
+										 aria-valuenow="@percentage"
+										 aria-valuemin="0"
+										 aria-valuemax="100">
+									</div>
+								</div>
+							</div>
+						}
+						
+						<div class="mt-4 p-3 bg-light rounded">
+							<strong>Total de Gastos: R$ @totalExpenses.ToString("N2")</strong>
 						</div>
 					}
 				</div>
@@ -120,17 +165,32 @@
 		</div>
 	</div>
 
-	<div class="card mb-4">
-		<div class="card-header bg-info text-white">
-			<h4 class="mb-0">Todas as Transações do Mês</h4>
+	<div class="card mb-4" id="transactions-table">
+		<div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+			<h4 class="mb-0">
+				Todas as Transações do Mês
+				@if (selectedCategoryFilter != null)
+				{
+					<span class="badge bg-warning text-dark ms-2">
+						Filtrado: @categoryService.GetCategoryName(selectedCategoryFilter.Value)
+					</span>
+				}
+			</h4>
+			@if (selectedCategoryFilter != null)
+			{
+				<button class="btn btn-sm btn-light" @onclick="ClearCategoryFilter">
+					<i class="bi bi-x"></i> Limpar Filtro
+				</button>
+			}
 		</div>
 		<div class="card-body">
 			@if (selectedMonth.HasValue)
 			{
 				var monthTransactions = transactionService.Transactions
-				.Where(t => t.OperationDate.Year == selectedMonth.Value.year && t.OperationDate.Month == selectedMonth.Value.month)
-				.OrderByDescending(x => x.OperationDate)
-				.ToList();
+					.Where(t => t.OperationDate.Year == selectedMonth.Value.year && t.OperationDate.Month == selectedMonth.Value.month)
+					.Where(t => selectedCategoryFilter == null || t.CategoryId == selectedCategoryFilter)
+					.OrderByDescending(x => x.OperationDate)
+					.ToList();
 
 				@if (monthTransactions.Count == 0)
 				{
@@ -147,6 +207,7 @@
 									<th>Categoria</th>
 									<th>Descrição</th>
 									<th class="text-end">Valor</th>
+									<th class="text-center">Ações</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -163,6 +224,11 @@
 										<td>@categoryService.GetCategoryName(t.CategoryId)</td>
 										<td>@t.Description</td>
 										<td class="text-end fw-bold">R$ @t.Amount.ToString("N2")</td>
+										<td class="text-center">
+											<a href="/transactions/@t.Id" class="btn btn-sm btn-warning" title="Editar">
+												<i class="bi bi-pencil"></i>
+											</a>
+										</td>
 									</tr>
 								}
 							</tbody>
@@ -180,6 +246,7 @@
 	Dictionary<Guid, decimal> expensesByCategory = new();
 	private List<(int year, int month)> availableMonths = new();
 	private (int year, int month)? selectedMonth = null;
+	private Guid? selectedCategoryFilter = null;
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -272,7 +339,21 @@
 		if (parts?.Length == 2 && int.TryParse(parts[0], out int year) && int.TryParse(parts[1], out int month))
 		{
 			selectedMonth = (year, month);
+			selectedCategoryFilter = null;
 			BuildCategorySummary();
 		}
+	}
+
+	private async Task FilterByCategory(Guid categoryId)
+	{
+		selectedCategoryFilter = categoryId;
+		StateHasChanged();
+		await Task.Delay(100);
+		await JSRuntime.InvokeVoidAsync("scrollToElement", "transactions-table");
+	}
+
+	private void ClearCategoryFilter()
+	{
+		selectedCategoryFilter = null;
 	}
 }
